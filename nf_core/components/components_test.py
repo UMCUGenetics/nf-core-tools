@@ -122,7 +122,7 @@ class ComponentsTest(ComponentCommand):  # type: ignore[misc]
                 except LookupError:
                     raise
 
-        self.component_dir = Path(self.component_type, self.modules_repo.repo_path, *self.component_name.split("/"))
+        self.component_dir = Path(self.component_type, self.org, *self.component_name.split("/"))
 
         # First, sanity check that the module directory exists
         if not Path(self.directory, self.component_dir).is_dir():
