@@ -83,6 +83,8 @@ class ComponentLint(ComponentCommand):
 
         self.lint_config: NFCoreYamlLintConfig | None = None
         self.modules_json: ModulesJson | None = None
+        self.subtest_filter: dict[str, list[str]] = {}
+        self.subtest_ignore: dict[str, list[str]] = {}
 
         if self.component_type == "modules":
             self.lint_tests = self.get_all_module_lint_tests(self.repo_type == "pipeline")
@@ -197,22 +199,47 @@ class ComponentLint(ComponentCommand):
         else:
             return ["main_nf", "meta_yml", "subworkflow_todos", "subworkflow_if_empty_null", "subworkflow_tests"]
 
-    def set_up_pipeline_files(self):
+    def _apply_lint_config(self) -> None:
+        """Load the lint config from .nf-core.yml and apply it to filter tests.
+
+        Can be called for any repo type.  Pipeline-specific setup (modules.json)
+        is handled separately in :meth:`set_up_pipeline_files`.
+        """
         self.load_lint_config()
+        if self.lint_config:
+            for test_name in list(self.lint_tests):
+                config_val = self.lint_config.get(test_name, {})
+                if config_val is False:
+                    log.info(f"Ignoring lint test: {test_name}")
+                    self.lint_tests.remove(test_name)
+                elif isinstance(config_val, list):
+                    log.info(f"Ignoring sub-tests of {test_name}: {config_val}")
+                    self.subtest_ignore[test_name] = config_val
+
+    def set_up_pipeline_files(self):
+        self._apply_lint_config()
         self.modules_json = ModulesJson(self.directory)
         self.modules_json.load()
 
-        # Only continue if a lint config has been loaded
-        if self.lint_config:
-            for test_name in self.lint_tests:
-                if self.lint_config.get(test_name, {}) is False:
-                    log.info(f"Ignoring lint test: {test_name}")
-                    self.lint_tests.remove(test_name)
-
     def filter_tests_by_key(self, key):
-        """Filters the tests by the supplied key"""
+        """Filters the tests by the supplied key.
+
+        Supports dot notation to restrict to specific sub-tests within a key,
+        e.g. ``main_nf.when_condition`` runs only the ``when_condition`` sub-test
+        inside ``main_nf``.  Plain key names (e.g. ``main_nf``) run all sub-tests
+        for that key.
+        """
+        top_keys: list[str] = []
+        for k in key:
+            if "." in k:
+                parent, subtest = k.split(".", 1)
+                self.subtest_filter.setdefault(parent, []).append(subtest)
+                top_keys.append(parent)
+            else:
+                top_keys.append(k)
+
         # Check that supplied test keys exist
-        bad_keys = [k for k in key if k not in self.lint_tests]
+        bad_keys = [k for k in top_keys if k not in self.lint_tests]
         if len(bad_keys) > 0:
             raise AssertionError(
                 "Test name{} not recognised: '{}'".format(
@@ -222,7 +249,27 @@ class ComponentLint(ComponentCommand):
             )
 
         # If -k supplied, only run these tests
-        self.lint_tests = [k for k in self.lint_tests if k in key]
+        self.lint_tests = [k for k in self.lint_tests if k in top_keys]
+
+    def _apply_subtest_filters(self, mod: NFCoreComponent) -> None:
+        """Remove sub-test results that should be skipped.
+
+        Applies two independent filters:
+        - ``subtest_filter`` (whitelist): set via ``--key parent.subtest`` CLI flag.
+          Only results whose ``lint_test`` is listed are kept for the given parent.
+        - ``subtest_ignore`` (blacklist): set via ``parent: [subtest, ...]`` in the
+          ``lint:`` section of ``.nf-core.yml``.
+          Results whose ``lint_test`` is listed are discarded for the given parent.
+        """
+        for attr in ("passed", "warned", "failed"):
+            results = getattr(mod, attr)
+            filtered = [
+                r
+                for r in results
+                if not (r[0] in self.subtest_filter and r[1] not in self.subtest_filter[r[0]])
+                and not (r[0] in self.subtest_ignore and r[1] in self.subtest_ignore[r[0]])
+            ]
+            setattr(mod, attr, filtered)
 
     def _print_results(self, show_passed=False, sort_by="test", plain_text=False):
         """Print linting results to the command line.

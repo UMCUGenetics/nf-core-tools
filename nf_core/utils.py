@@ -1322,6 +1322,26 @@ class NFCoreYamlLintConfig(BaseModel):
     """ Lint the README.md file """
     nfcore_components: bool | None = None
     """ Lint all required files to use nf-core modules and subworkflows """
+    # Component (module/subworkflow) lint tests — False disables the test entirely;
+    # a list of sub-test names causes only those sub-tests to be skipped.
+    environment_yml: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the environment_yml module lint test """
+    main_nf: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the main_nf module lint test """
+    meta_yml: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the meta_yml module lint test """
+    module_changes: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the module_changes lint test """
+    module_deprecations: bool | None = None
+    """ Disable the module_deprecations lint test """
+    module_patch: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the module_patch lint test """
+    module_tests: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the module_tests lint test """
+    module_todos: bool | None = None
+    """ Disable the module_todos lint test """
+    module_version: bool | None = None
+    """ Disable the module_version lint test """
     actions_nf_test: bool | None = None
     """ Lint all required files to use GitHub Actions CI """
     actions_awstest: bool | None = None

@@ -46,6 +46,71 @@ class ModuleLint(ComponentLint):
     repository or in any nf-core pipeline directory
     """
 
+    # Maps every top-level lint key to its known sub-test names.
+    # Keys marked with (*) are only active in a specific repo context
+    # (see get_all_module_lint_tests).
+    ALL_SUBTESTS: dict[str, list[str]] = {
+        "environment_yml": [
+            "environment_yml_exists",
+            "environment_yml_sorted",
+            "environment_yml_valid",
+        ],
+        "main_nf": [
+            "bioconda_latest",
+            "bioconda_version",
+            "container_links",
+            "deprecated_dsl2",
+            "deprecated_enable_conda",
+            "docker_tag",
+            "main_nf_container",
+            "main_nf_exists",
+            "main_nf_input_tuple",
+            "main_nf_meta_output",
+            "main_nf_meta_prefix",
+            "main_nf_script_outputs",
+            "main_nf_script_shell",
+            "main_nf_shell_template",
+            "main_nf_version_emit",
+            "main_nf_version_topic",
+            "process_capitals",
+            "process_exist",
+            "process_standard_label",
+            "singularity_tag",
+            "when_condition",
+            "when_exist",
+            "wrong_version_emit",
+            "wrong_version_output",
+        ],
+        "meta_yml": [
+            "correct_meta_inputs",
+            "correct_meta_outputs",
+            "correct_meta_topics",
+            "has_meta_topics",
+            "meta_input",
+            "meta_name",
+            "meta_output",
+            "meta_yml_exists",
+            "meta_yml_valid",
+        ],
+        # pipeline-only keys
+        "module_changes": ["check_local_copy"],
+        "module_patch": ["patch", "patch_reversible", "patch_valid"],
+        "module_version": ["git_sha", "module_version"],
+        # modules-repo-only key
+        "module_tests": [
+            "test_dir_exists",
+            "test_main_nf_exists",
+            "test_main_tags",
+            "test_old_test_dir",
+            "test_snap_md5sum",
+            "test_snap_versions",
+            "test_snapshot_exists",
+        ],
+        # single-subtest keys (disabling the key is equivalent)
+        "module_deprecations": ["module_deprecations"],
+        "module_todos": ["module_todo"],
+    }
+
     # Import lint functions
     environment_yml = environment_yml
     main_nf = main_nf
@@ -60,6 +125,44 @@ class ModuleLint(ComponentLint):
     module_tests = module_tests
     module_todos = module_todos
     module_version = module_version
+
+    @staticmethod
+    def print_available_tests() -> None:
+        """Print all lint keys and their sub-tests to the console."""
+        import rich.box
+        import rich.panel
+        from rich.table import Table
+
+        # Which keys are available in which context
+        modules_repo_keys = set(ModuleLint.get_all_module_lint_tests(is_pipeline=False))
+        pipeline_keys = set(ModuleLint.get_all_module_lint_tests(is_pipeline=True))
+
+        table = Table(box=rich.box.MINIMAL, pad_edge=False, border_style="dim", show_header=True)
+        table.add_column("Key", style="bold cyan", no_wrap=True)
+        table.add_column("Sub-test", style="green")
+        table.add_column("Context", style="dim")
+
+        for key, subtests in ModuleLint.ALL_SUBTESTS.items():
+            in_modules = key in modules_repo_keys
+            in_pipeline = key in pipeline_keys
+            if in_modules and in_pipeline:
+                context = "modules + pipeline"
+            elif in_pipeline:
+                context = "pipeline only"
+            else:
+                context = "modules repo only"
+
+            for i, subtest in enumerate(subtests):
+                table.add_row(key if i == 0 else "", subtest, context if i == 0 else "")
+
+        console.print(
+            rich.panel.Panel(
+                table,
+                title="[bold]Available module lint tests",
+                title_align="left",
+                padding=1,
+            )
+        )
 
     def __init__(
         self,
@@ -167,9 +270,11 @@ class ModuleLint(ComponentLint):
             self.filter_tests_by_key(key)
             log.info("Only running tests: '{}'".format("', '".join(key)))
 
-        # If it is a pipeline, load the lint config file and the modules.json file
+        # Load lint config for both repo types; pipeline also needs modules.json
         if self.repo_type == "pipeline":
             self.set_up_pipeline_files()
+        elif self.repo_type == "modules":
+            self._apply_lint_config()
 
         # Lint local modules
         if local and len(local_modules) > 0:
@@ -258,6 +363,7 @@ class ModuleLint(ComponentLint):
                 else:
                     getattr(self, test_name)(mod)
 
+            self._apply_subtest_filters(mod)
             self.passed += [LintResult(mod, *m) for m in mod.passed]
             warned = [LintResult(mod, *m) for m in (mod.warned + mod.failed)]
             if not self.fail_warned:
@@ -285,6 +391,7 @@ class ModuleLint(ComponentLint):
                 else:
                     getattr(self, test_name)(mod)
 
+            self._apply_subtest_filters(mod)
             self.passed += [LintResult(mod, *m) for m in mod.passed]
             warned = [LintResult(mod, *m) for m in mod.warned]
             if not self.fail_warned:

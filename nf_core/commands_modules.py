@@ -262,7 +262,7 @@ def modules_test(ctx, tool, directory, no_prompts, update, once, profile, migrat
 
 
 def modules_lint(
-    ctx, tool, directory, registry, key, all, fail_warned, local, passed, sort_by, fix_version, fix, plain_text
+    ctx, tool, directory, registry, key, all, fail_warned, local, passed, sort_by, fix_version, fix, plain_text, list_tests=False
 ):
     """
     Lint one or more modules in a directory.
@@ -275,6 +275,10 @@ def modules_lint(
     """
     from nf_core.components.lint import LintExceptionError
     from nf_core.modules.lint import ModuleLint
+
+    if list_tests:
+        ModuleLint.print_available_tests()
+        return
 
     try:
         module_lint = ModuleLint(

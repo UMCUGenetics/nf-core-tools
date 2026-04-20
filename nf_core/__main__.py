@@ -1302,7 +1302,7 @@ def command_modules_test(ctx, tool, directory, no_prompts, update, once, profile
     type=str,
     metavar="<test>",
     multiple=True,
-    help="Run only these lint tests",
+    help="Run only these lint tests. Use dot notation to restrict to a specific sub-test (e.g. main_nf.when_condition).",
 )
 @click.option("-a", "--all", is_flag=True, help="Run on all modules")
 @click.option("-w", "--fail-warned", is_flag=True, help="Convert warn tests to failures")
@@ -1327,14 +1327,15 @@ def command_modules_test(ctx, tool, directory, no_prompts, update, once, profile
     envvar="NF_CORE_LINT_OUTPUT",
     help="Print results in plain text format without Rich formatting (easier to copy). Can also be enabled with env var NF_CORE_LINT_OUTPUT.",
 )
+@click.option("--list", "list_tests", is_flag=True, help="List all available lint test keys and sub-tests, then exit.")
 def command_modules_lint(
-    ctx, tool, directory, registry, key, all, fail_warned, local, passed, sort_by, fix_version, fix, plain_text
+    ctx, tool, directory, registry, key, all, fail_warned, local, passed, sort_by, fix_version, fix, plain_text, list_tests
 ):
     """
     Lint one or more modules in a directory.
     """
     modules_lint(
-        ctx, tool, directory, registry, key, all, fail_warned, local, passed, sort_by, fix_version, fix, plain_text
+        ctx, tool, directory, registry, key, all, fail_warned, local, passed, sort_by, fix_version, fix, plain_text, list_tests
     )
 
 
