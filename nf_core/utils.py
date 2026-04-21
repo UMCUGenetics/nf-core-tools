@@ -1342,6 +1342,17 @@ class NFCoreYamlLintConfig(BaseModel):
     """ Disable the module_todos lint test """
     module_version: bool | None = None
     """ Disable the module_version lint test """
+    # Subworkflow lint tests
+    subworkflow_changes: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the subworkflow_changes lint test """
+    subworkflow_if_empty_null: bool | None = None
+    """ Disable the subworkflow_if_empty_null lint test """
+    subworkflow_tests: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the subworkflow_tests lint test """
+    subworkflow_todos: bool | None = None
+    """ Disable the subworkflow_todos lint test """
+    subworkflow_version: bool | list[str] | None = None
+    """ Disable or skip sub-tests for the subworkflow_version lint test """
     actions_nf_test: bool | None = None
     """ Lint all required files to use GitHub Actions CI """
     actions_awstest: bool | None = None

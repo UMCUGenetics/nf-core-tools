@@ -1595,7 +1595,7 @@ def command_subworkflows_list_local(ctx, keywords, json, directory):  # pylint: 
     type=str,
     metavar="<test>",
     multiple=True,
-    help="Run only these lint tests",
+    help="Run only these lint tests. Use dot notation to restrict to a specific sub-test (e.g. main_nf.workflow_capitals).",
 )
 @click.option("-a", "--all", is_flag=True, help="Run on all subworkflows")
 @click.option("-w", "--fail-warned", is_flag=True, help="Convert warn tests to failures")
@@ -1615,14 +1615,15 @@ def command_subworkflows_list_local(ctx, keywords, json, directory):  # pylint: 
     envvar="NF_CORE_LINT_OUTPUT",
     help="Print results in plain text format without Rich formatting (easier to copy). Can also be enabled with env var NF_CORE_LINT_OUTPUT.",
 )
+@click.option("--list", "list_tests", is_flag=True, help="List all available lint test keys and sub-tests, then exit.")
 def command_subworkflows_lint(
-    ctx, subworkflow, directory, registry, key, all, fail_warned, local, passed, sort_by, fix, plain_text
+    ctx, subworkflow, directory, registry, key, all, fail_warned, local, passed, sort_by, fix, plain_text, list_tests
 ):
     """
     Lint one or more subworkflows in a directory.
     """
     subworkflows_lint(
-        ctx, subworkflow, directory, registry, key, all, fail_warned, local, passed, sort_by, fix, plain_text
+        ctx, subworkflow, directory, registry, key, all, fail_warned, local, passed, sort_by, fix, plain_text, list_tests
     )
 
 

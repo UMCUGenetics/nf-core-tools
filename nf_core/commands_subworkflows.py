@@ -105,7 +105,7 @@ def subworkflows_list_local(ctx, keywords, json, directory):  # pylint: disable=
 
 
 def subworkflows_lint(
-    ctx, subworkflow, directory, registry, key, all, fail_warned, local, passed, sort_by, fix, plain_text
+    ctx, subworkflow, directory, registry, key, all, fail_warned, local, passed, sort_by, fix, plain_text, list_tests=False
 ):
     """
     Lint one or more subworkflows in a directory.
@@ -118,6 +118,10 @@ def subworkflows_lint(
     """
     from nf_core.components.lint import LintExceptionError
     from nf_core.subworkflows import SubworkflowLint
+
+    if list_tests:
+        SubworkflowLint.print_available_tests()
+        return
 
     try:
         subworkflow_lint = SubworkflowLint(
